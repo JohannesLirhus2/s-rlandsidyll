@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+
+<html class="light" lang="no"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Logg inn - Sørlandsidyll</title>
+<link rel="icon" type="image/png" href="assets/lime.png"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script type="module" src="assets/component-loader.js"></script>
+<script src="assets/header.js"></script>
+<script type="module" src="assets/firebase.js"></script>
+<script type="module" src="assets/auth.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700;900&amp;family=Playfair+Display:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#334155",
+                        "accent": "#0d9488",
+                        "background-light": "#ffffff",
+                        "slate-custom": "#f8fafc"
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"],
+                        "serif": ["Playfair Display", "serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.375rem",
+                        "xl": "0.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Work Sans', sans-serif;
+        }
+        
+        .gsi-material-button {
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            -webkit-appearance: none;
+            background-color: WHITE;
+            background-image: none;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            box-sizing: border-box;
+            color: #3c4043;
+            cursor: pointer;
+            font-family: 'Roboto', arial, sans-serif;
+            font-size: 14px;
+            height: 40px;
+            letter-spacing: 0.25px;
+            outline: none;
+            overflow: hidden;
+            padding: 0 12px;
+            position: relative;
+            text-align: center;
+            transition: background-color .218s, border-color .218s, box-shadow .218s;
+            vertical-align: middle;
+            white-space: nowrap;
+            width: auto;
+            max-width: 400px;
+            min-width: min-content;
+        }
+
+        .gsi-material-button:hover {
+            border-color: #d2e3fc;
+            background-color: rgba(66, 133, 244, .04);
+        }
+
+        .gsi-material-button:active {
+            background-color: rgba(66, 133, 244, .1);
+        }
+
+        .gsi-material-button-content-wrapper {
+            -webkit-align-items: center;
+            align-items: center;
+            display: flex;
+            -webkit-flex-direction: row;
+            flex-direction: row;
+            -webkit-flex-wrap: nowrap;
+            flex-wrap: nowrap;
+            height: 100%;
+            justify-content: space-between;
+            position: relative;
+            width: 100%;
+        }
+
+        .gsi-material-button-icon {
+            height: 20px;
+            margin-right: 12px;
+            min-width: 20px;
+            width: 20px;
+        }
+
+        .gsi-material-button-contents {
+            -webkit-flex-grow: 1;
+            flex-grow: 1;
+            font-family: 'Roboto', arial, sans-serif;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: top;
+        }
+
+        .gsi-material-button-state {
+            transition: opacity .218s;
+            bottom: 0;
+            left: 0;
+            opacity: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+        }
+        
+        /* Mobile header - fixed positioning */
+        @media (max-width: 768px) {
+            header {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+            }
+            
+            body {
+                padding-top: 64px; /* h-16 = 64px */
+            }
+            
+            dialog {
+                max-width: calc(100vw - 2rem) !important;
+                max-height: calc(100vh - 2rem);
+                margin: 1rem;
+                width: calc(100vw - 2rem) !important;
+            }
+            dialog::backdrop {
+                background: rgba(0, 0, 0, 0.5);
+            }
+        }
+    </style>
+</head>
+<body class="antialiased bg-white min-h-screen flex flex-col">
+<!-- Top Navigation Bar -->
+<div id="header-placeholder"></div>
+<!-- Main Content Area with Background Image -->
+<main class="flex-grow flex items-center justify-center relative py-12 px-4 bg-slate-50">
+<!-- Background Overlay Image -->
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover opacity-10 pointer-events-none" data-alt="Beautiful Norwegian coastal landscape with calm blue water" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyN5hDjnucetZdpUPnODAJL8WIUfFpCjnJgV_zSN2SiWRqu0-mrDjid5fSvmzGBZvdmWM713LPhCvBmwq2PlekXFeFvCCgqsNxtLspIt9bQHejlz6PkQD0I50eiWkGYLJPVuDRMqBvTJAtmzwJU22e5oZ_VxNvKaGvfvIU2UCaEDbIV_krIayiKXYCYHUq-cvC5ZzDLO-oELuluPHMbwVx83LQEVDnF2m1GxsOTFzoV2zaWsXA-ufvOxs6ix-TU7UAo2asoNguoI8"/>
+</div>
+<!-- Login Card -->
+<div class="relative z-10 w-full max-w-md">
+<div class="bg-white shadow-xl rounded-xl p-8 border border-slate-200">
+<div class="text-center mb-8">
+<h1 class="text-3xl font-bold text-slate-900 tracking-tight mb-2 font-serif">Logg inn</h1>
+<p class="text-slate-500 font-display">Velkommen tilbake til kjøkkenet</p>
+</div>
+<!-- Error Message -->
+<div id="error-message" class="hidden mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+<p class="text-sm text-red-600 font-medium"></p>
+</div>
+<form id="login-form" class="space-y-6">
+<!-- Email Field -->
+<div class="space-y-2">
+<label class="text-sm font-semibold text-slate-700 ml-1" for="email">E-post</label>
+<div class="relative group">
+<input class="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-accent focus:border-transparent transition-all outline-none placeholder:text-slate-400" id="email" placeholder="din@epost.no" required="" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-2">
+<div class="flex justify-between items-center ml-1">
+<label class="text-sm font-semibold text-slate-700" for="password">Passord</label>
+<a class="text-xs font-semibold text-accent hover:underline" href="#">Glemt passord?</a>
+</div>
+<div class="relative flex items-center">
+<input class="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-accent focus:border-transparent transition-all outline-none placeholder:text-slate-400 pr-12" id="password" placeholder="••••••••" required="" type="password"/>
+<button class="absolute right-3 text-slate-400 hover:text-slate-600 transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+</div>
+</div>
+<!-- Remember Me -->
+<div class="flex items-center space-x-2 ml-1">
+<input class="w-4 h-4 rounded border-slate-300 text-accent focus:ring-accent" id="remember" type="checkbox"/>
+<label class="text-sm text-slate-600" for="remember">Husk meg på denne enheten</label>
+</div>
+<!-- Login Button -->
+<button class="w-full bg-accent hover:bg-teal-700 text-white font-bold py-3.5 rounded-lg shadow-lg transform active:scale-[0.98] transition-all uppercase tracking-wider text-sm" type="submit">
+                        Logg inn
+                    </button>
+</form>
+<!-- Divider -->
+<div class="relative my-8">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-slate-200"></div>
+</div>
+<div class="relative flex justify-center text-xs uppercase">
+<span class="bg-white px-2 text-slate-500">Eller logg inn med</span>
+</div>
+</div>
+<!-- Social Logins -->
+<div class="flex justify-center">
+<button id="google-signin-button" class="gsi-material-button">
+  <div class="gsi-material-button-state"></div>
+  <div class="gsi-material-button-content-wrapper">
+    <div class="gsi-material-button-icon">
+      <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" xmlns:xlink="http://www.w3.org/1999/xlink" style="display: block;">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+        <path fill="none" d="M0 0h48v48H0z"></path>
+      </svg>
+    </div>
+    <span class="gsi-material-button-contents">Sign in with Google</span>
+    <span style="display: none;">Sign in with Google</span>
+  </div>
+</button>
+</div>
+<p class="mt-8 text-center text-sm text-slate-600">
+                    Har du ikke konto? 
+                    <a class="font-bold text-accent hover:underline" href="#">Registrer deg her</a>
+</p>
+</div>
+</div>
+</main>
+<!-- Simple Footer -->
+<div id="footer-placeholder"></div>
+<script>
+// Mobile menu functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+    const closeMobileMenu = document.getElementById('close-mobile-menu');
+    const header = document.querySelector('header');
+    
+    function openMobileMenu() {
+        mobileMenu.classList.remove('translate-x-full');
+        mobileMenuOverlay.classList.remove('hidden');
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+        
+        // Ensure header is visible and not affected by scroll behavior
+        if (header) {
+            header.style.transform = 'translateY(0)';
+            header.style.visibility = 'visible';
+        }
+    }
+    
+    function closeMobileMenuFn() {
+        mobileMenu.classList.add('translate-x-full');
+        mobileMenuOverlay.classList.add('hidden');
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        
+        // Reset header transform to allow scroll-based hiding to work again
+        if (header) {
+            header.style.transform = '';
+            header.style.visibility = '';
+        }
+    }
+    
+    if (mobileMenuButton) {
+        mobileMenuButton.addEventListener('click', openMobileMenu);
+    }
+    
+    if (closeMobileMenu) {
+        closeMobileMenu.addEventListener('click', closeMobileMenuFn);
+    }
+    
+    if (mobileMenuOverlay) {
+        mobileMenuOverlay.addEventListener('click', closeMobileMenuFn);
+    }
+
+    // Profile submenu toggle functionality
+    const profileToggle = document.getElementById('mobile-profile-toggle');
+    const profileSubmenu = document.getElementById('mobile-profile-submenu');
+    const profileChevron = document.getElementById('mobile-profile-chevron');
+    
+    if (profileToggle && profileSubmenu && profileChevron) {
+        profileToggle.addEventListener('click', function() {
+            const isHidden = profileSubmenu.classList.contains('hidden');
+            if (isHidden) {
+                profileSubmenu.classList.remove('hidden');
+                profileChevron.style.transform = 'rotate(180deg)';
+            } else {
+                profileSubmenu.classList.add('hidden');
+                profileChevron.style.transform = 'rotate(0deg)';
+            }
+        });
+    }
+});
+</script>
+
+</body></html>

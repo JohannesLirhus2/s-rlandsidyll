@@ -1,0 +1,103 @@
+<header class="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-slate-200">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex items-center justify-between h-16">
+<div class="flex items-center gap-6">
+<!-- Logo -->
+<div class="flex items-center cursor-pointer" onclick="window.location.href='index.html'">
+<img src="assets/logo-small.png" alt="Sørlandsidyll" class="h-10 w-auto"/>
+</div>
+<!-- Header Search Bar -->
+<div class="hidden md:flex items-center">
+<div class="relative">
+<button type="button" id="headerSearchButton" class="material-symbols-outlined text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-sm hover:text-accent transition-colors cursor-pointer z-10">search</button>
+<input id="headerSearchInput" class="pl-9 pr-4 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent transition-all outline-none placeholder:text-slate-400 w-64" placeholder="Søk oppskrifter..." type="text"/>
+</div>
+</div>
+<!-- End Left Group -->
+</div>
+<!-- Desktop Nav -->
+<nav class="hidden md:flex items-center gap-2">
+<a id="oppskrifter-link" class="text-xs font-semibold uppercase tracking-wider text-slate-600 hover:text-accent transition-colors px-3" href="index.html">alle oppskrifter</a>
+<a id="om-oss-link" class="hidden text-xs font-semibold uppercase tracking-wider text-slate-600 hover:text-accent transition-colors px-3" href="#">Om oss</a>
+<!-- Logged out buttons -->
+<button id="login-button" class="text-xs font-bold px-3 py-1.5 hover:text-accent transition-all uppercase tracking-wider" onclick="window.location.href='login.html'">Logg inn</button>
+<!-- Logged in profile menu (hidden by default) -->
+<div id="profile-menu-container" class="hidden relative">
+<button id="profile-menu-button" class="w-10 h-10 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center hover:ring-2 hover:ring-accent transition-all" style="box-shadow: 0 0 0 1px #d1d5db, 0 0 0 2px #ffffff, 0 0 0 3px #d1d5db">
+<img id="profile-menu-image" class="w-full h-full object-cover" alt="Profilbilde"/>
+<span id="profile-menu-initials" class="text-xs font-bold text-slate-600"></span>
+</button>
+<!-- Dropdown menu -->
+<div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+<button id="menu-new-recipe" class="hidden w-full text-left text-sm font-semibold uppercase tracking-wider text-slate-600 hover:bg-slate-50 px-4 py-3 border-b border-slate-200">Ny oppskrift</button>
+<button id="menu-my-account" class="w-full text-left text-sm font-semibold uppercase tracking-wider text-slate-600 hover:bg-slate-50 px-4 py-3 border-b border-slate-200">Min profil</button>
+<button id="menu-logout" class="w-full text-left text-sm font-semibold uppercase tracking-wider text-red-600 hover:bg-red-50 px-4 py-3">Logg ut</button>
+</div>
+</div>
+</nav>
+<!-- Mobile Menu Icon -->
+<button id="mobile-menu-button" class="md:hidden flex items-center p-2 hover:bg-slate-100 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-slate-700">menu</span>
+</button>
+</div>
+</div>
+
+<!-- Mobile Menu Overlay -->
+<div id="mobile-menu-overlay" class="hidden fixed inset-0 bg-black/50 z-40 md:hidden"></div>
+
+<!-- Mobile Menu Drawer -->
+<div id="mobile-menu" class="fixed top-0 right-0 bottom-0 h-screen w-80 shadow-xl transform translate-x-full transition-transform duration-300 z-50 md:hidden" style="background-color: #ffffff;">
+<div class="flex flex-col h-full">
+<!-- Mobile Menu Header -->
+<div class="flex items-center justify-between px-4 py-4 border-b border-slate-200">
+<h2 class="text-lg font-bold text-slate-800">Meny</h2>
+<button id="close-mobile-menu" class="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-slate-700">close</span>
+</button>
+</div>
+
+<!-- Mobile Search -->
+<div class="px-4 py-3 border-b border-slate-200">
+<div class="relative">
+<span class="material-symbols-outlined text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-sm">search</span>
+<input id="mobileSearchInput" class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent transition-all outline-none placeholder:text-slate-400" placeholder="Søk oppskrifter..." type="text"/>
+</div>
+</div>
+
+<!-- Mobile Navigation Links -->
+<nav class="flex-1 overflow-y-auto bg-white">
+<!-- Always visible: Alle oppskrifter -->
+<a href="index.html" class="block px-4 py-3 text-sm font-semibold uppercase tracking-wider text-slate-600 hover:bg-slate-50 border-b border-slate-200">Alle oppskrifter</a>
+
+<!-- Ny oppskrift (visible when logged in with publish/editor access) -->
+<a id="mobile-new-recipe-link" href="ny-oppskrift.html" class="hidden block px-4 py-3 text-sm font-semibold uppercase tracking-wider text-accent hover:bg-slate-50 border-b border-slate-200">Ny oppskrift</a>
+
+<!-- Login button (visible when logged out) -->
+<a id="mobile-login-button" href="login.html" class="block px-4 py-3 text-sm font-semibold uppercase tracking-wider text-accent hover:bg-slate-50 border-b border-slate-200">Logg inn</a>
+
+<!-- Profile Section (visible when logged in) -->
+<div id="mobile-profile-section" class="hidden">
+<!-- Profile Header with Avatar (Clickable Toggle) -->
+<button id="mobile-profile-toggle" class="w-full px-4 py-3 border-b border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors">
+<div class="flex items-center gap-3">
+<div id="mobile-profile-avatar" class="w-12 h-12 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center" style="box-shadow: 0 0 0 1px #d1d5db">
+<img id="mobile-profile-image" class="w-full h-full object-cover hidden" alt="Profilbilde"/>
+<span id="mobile-profile-initials" class="text-sm font-bold text-slate-600"></span>
+</div>
+<div class="flex-1 min-w-0 text-left">
+<p id="mobile-profile-name" class="text-sm font-semibold text-slate-800 truncate"></p>
+<p class="text-xs text-slate-500">Innlogget</p>
+</div>
+<span id="mobile-profile-chevron" class="material-symbols-outlined text-slate-400 transition-transform duration-200">expand_more</span>
+</div>
+</button>
+<!-- Profile Submenu Items (Hidden by default) -->
+<div id="mobile-profile-submenu" class="hidden bg-slate-50">
+<a id="mobile-menu-my-account" href="min-konto.html" class="block px-4 py-3 pl-8 text-sm font-semibold uppercase tracking-wider text-slate-600 hover:bg-slate-100 border-b border-slate-200">Min profil</a>
+<button id="mobile-menu-logout" class="w-full text-left px-4 py-3 pl-8 text-sm font-semibold uppercase tracking-wider text-red-600 hover:bg-red-50 border-b border-slate-200">Logg ut</button>
+</div>
+</div>
+</nav>
+</div>
+</div>
+</header>

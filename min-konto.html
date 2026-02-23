@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+
+<html lang="no"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Min Konto - Sørlandsidyll</title>
+<link rel="icon" type="image/png" href="assets/lime.png"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script type="module" src="assets/component-loader.js"></script>
+<script src="assets/header.js"></script>
+<script type="module" src="assets/firebase.js"></script>
+<script type="module" src="assets/auth.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#19c3e6",
+                        "accent": "#0d9488",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#111e21",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Work Sans', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-nav {
+            background-color: rgba(25, 195, 230, 0.15);
+            color: #19c3e6;
+        }
+        .active-nav .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Mobile header - fixed positioning */
+        @media (max-width: 768px) {
+            header {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+            }
+            
+            body {
+                padding-top: 64px; /* h-16 = 64px */
+            }
+            
+            dialog {
+                max-width: calc(100vw - 2rem) !important;
+                max-height: calc(100vh - 2rem);
+                margin: 1rem;
+                width: calc(100vw - 2rem) !important;
+            }
+            dialog::backdrop {
+                background: rgba(0, 0, 0, 0.5);
+            }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-slate-200">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex items-center justify-between h-16">
+<div class="flex items-center gap-6">
+<!-- Logo -->
+<div class="flex items-center cursor-pointer" onclick="window.location.href='index.html'">
+<img src="assets/logo-small.png" alt="Sørlandsidyll" class="h-10 w-auto"/>
+</div>
+<!-- Header Search Bar -->
+<div class="hidden md:flex items-center">
+<div class="relative">
+<button type="button" id="headerSearchButton" class="material-symbols-outlined text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-sm hover:text-accent transition-colors cursor-pointer z-10">search</button>
+<input id="headerSearchInput" class="pl-9 pr-4 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent transition-all outline-none placeholder:text-slate-400 w-64" placeholder="Søk oppskrifter..." type="text"/>
+</div>
+</div>
+<!-- End Left Group -->
+</div>
+<!-- Desktop Nav -->
+<nav class="hidden md:flex items-center gap-2">
+<a id="oppskrifter-link" class="text-xs font-semibold uppercase tracking-wider text-slate-600 hover:text-accent transition-colors px-3" href="index.html">alle oppskrifter</a>
+<a id="om-oss-link" class="hidden text-xs font-semibold uppercase tracking-wider text-slate-600 hover:text-accent transition-colors px-3" href="#">Om oss</a>
+<!-- Logged out buttons -->
+<button id="login-button" class="text-xs font-bold px-3 py-1.5 hover:text-accent transition-all uppercase tracking-wider" onclick="window.location.href='login.html'">Logg inn</button>
+<!-- Logged in profile menu (hidden by default) -->
+<div id="profile-menu-container" class="hidden relative">
+<button id="profile-menu-button" class="w-10 h-10 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center hover:ring-2 hover:ring-accent transition-all" style="box-shadow: 0 0 0 1px #d1d5db, 0 0 0 2px #ffffff, 0 0 0 3px #d1d5db">
+<img id="profile-menu-image" class="w-full h-full object-cover" alt="Profilbilde"/>
+<span id="profile-menu-initials" class="text-xs font-bold text-slate-600"></span>
+</button>
+<!-- Dropdown menu -->
+<div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+<button id="menu-new-recipe" class="hidden w-full text-left text-sm font-semibold uppercase tracking-wider text-slate-600 hover:bg-slate-50 px-4 py-3 border-b border-slate-200">Ny oppskrift</button>
+<button id="menu-edit-recipes" class="hidden w-full text-left text-sm font-semibold uppercase tracking-wider text-slate-600 hover:bg-slate-50 px-4 py-3 border-b border-slate-200">Rediger oppskrifter</button>
+<button id="menu-my-account" class="w-full text-left text-sm font-semibold uppercase tracking-wider text-slate-600 hover:bg-slate-50 px-4 py-3 border-b border-slate-200">Min konto</button>
+<button id="menu-logout" class="w-full text-left text-sm font-semibold uppercase tracking-wider text-red-600 hover:bg-red-50 px-4 py-3">Logg ut</button>
+</div>
+</div>
+</nav>
+<!-- Mobile Menu Icon -->
+<button id="mobile-menu-button" class="md:hidden flex items-center p-2 hover:bg-slate-100 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-slate-700">menu</span>
+</button>
+</div>
+</div>
+
+<!-- Mobile Menu Overlay -->
+<div id="mobile-menu-overlay" class="hidden fixed inset-0 bg-black/50 z-40 md:hidden"></div>
+
+<!-- Mobile Menu Drawer -->
+<div id="mobile-menu" class="fixed top-0 right-0 bottom-0 h-screen w-80 shadow-xl transform translate-x-full transition-transform duration-300 z-50 md:hidden" style="background-color: #ffffff;">
+<div class="flex flex-col h-full">
+<!-- Mobile Menu Header -->
+<div class="flex items-center justify-between px-4 py-4 border-b border-slate-200">
+<h2 class="text-lg font-bold text-slate-800">Meny</h2>
+<button id="close-mobile-menu" class="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-slate-700">close</span>
+</button>
+</div>
+
+<!-- Mobile Search -->
+<div class="px-4 py-3 border-b border-slate-200">
+<div class="relative">
+<span class="material-symbols-outlined text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-sm">search</span>
+<input id="mobileSearchInput" class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent transition-all outline-none placeholder:text-slate-400" placeholder="Søk oppskrifter..." type="text"/>
+</div>
+</div>
+
+<!-- Mobile Navigation Links -->
+<nav class="flex-1 overflow-y-auto bg-white">
+<!-- Always visible: Alle oppskrifter -->
+<a href="index.html" class="block px-4 py-3 text-sm font-semibold uppercase tracking-wider text-slate-600 hover:bg-slate-50 border-b border-slate-200">Alle oppskrifter</a>
+
+<!-- Login button (visible when logged out) -->
+<a id="mobile-login-button" href="login.html" class="block px-4 py-3 text-sm font-semibold uppercase tracking-wider text-accent hover:bg-slate-50 border-b border-slate-200">Logg inn</a>
+
+<!-- Profile Section (visible when logged in) -->
+<div id="mobile-profile-section" class="hidden">
+<!-- Profile Header with Avatar (Clickable Toggle) -->
+<button id="mobile-profile-toggle" class="w-full px-4 py-3 border-b border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors">
+<div class="flex items-center gap-3">
+<div id="mobile-profile-avatar" class="w-12 h-12 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center" style="box-shadow: 0 0 0 1px #d1d5db">
+<img id="mobile-profile-image" class="w-full h-full object-cover hidden" alt="Profilbilde"/>
+<span id="mobile-profile-initials" class="text-sm font-bold text-slate-600"></span>
+</div>
+<div class="flex-1 min-w-0 text-left">
+<p id="mobile-profile-name" class="text-sm font-semibold text-slate-800 truncate"></p>
+<p class="text-xs text-slate-500">Innlogget</p>
+</div>
+<span id="mobile-profile-chevron" class="material-symbols-outlined text-slate-400 transition-transform duration-200">expand_more</span>
+</div>
+</button>
+<!-- Profile Submenu Items (Hidden by default) -->
+<div id="mobile-profile-submenu" class="hidden bg-slate-50">
+<a id="mobile-menu-new-recipe" href="ny-oppskrift.html" class="hidden block px-4 py-3 pl-8 text-sm font-semibold uppercase tracking-wider text-slate-600 hover:bg-slate-100 border-b border-slate-200">Ny oppskrift</a>
+<a id="mobile-menu-my-recipes" href="#" class="block px-4 py-3 pl-8 text-sm font-semibold uppercase tracking-wider text-slate-600 hover:bg-slate-100 border-b border-slate-200">Mine oppskrifter</a>
+<a id="mobile-menu-edit-recipes" href="#" class="hidden block px-4 py-3 pl-8 text-sm font-semibold uppercase tracking-wider text-slate-600 hover:bg-slate-100 border-b border-slate-200">Rediger oppskrifter</a>
+<a id="mobile-menu-my-account" href="min-konto.html" class="block px-4 py-3 pl-8 text-sm font-semibold uppercase tracking-wider text-slate-600 hover:bg-slate-100 border-b border-slate-200">Min konto</a>
+<button id="mobile-menu-logout" class="w-full text-left px-4 py-3 pl-8 text-sm font-semibold uppercase tracking-wider text-red-600 hover:bg-red-50 border-b border-slate-200">Logg ut</button>
+</div>
+</div>
+</nav>
+</div>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+<div class="flex flex-col lg:flex-row gap-8">
+<!-- Sidebar Navigation -->
+<aside class="w-full lg:w-64 flex-shrink-0">
+<div class="bg-white dark:bg-slate-900 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-800">
+<div class="mb-6 px-2">
+<h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Min Meny</h2>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg active-nav font-medium transition-all group" href="#">
+<span class="material-symbols-outlined">person</span>
+                            Min Profil
+                        </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition-all group" href="#">
+<span class="material-symbols-outlined">favorite</span>
+                            Lagrede Oppskrifter
+                        </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition-all group" href="#">
+<span class="material-symbols-outlined">star</span>
+                            Mine Vurderinger
+                        </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition-all group border-t border-slate-50 dark:border-slate-800 mt-2 pt-4" href="#">
+<span class="material-symbols-outlined">settings</span>
+                            Innstillinger
+                        </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 font-medium transition-all group" href="#">
+<span class="material-symbols-outlined">logout</span>
+                            Logg ut
+                        </a>
+</nav>
+</div>
+</aside>
+<!-- Main Content Area -->
+<div class="flex-1 space-y-8">
+<!-- Profile Header -->
+<section class="bg-white dark:bg-slate-900 rounded-xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-center md:items-start gap-6">
+<div class="relative group">
+<div class="w-32 h-32 rounded-full bg-cover bg-center border-4 border-white dark:border-slate-800 shadow-lg" data-alt="Stort profilbilde av bruker" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBKT8DF7IEMFOmpj7GEl1UcvywPi5Lwd7LbfLDCeTRg2FDTN6tvp0sOa-kgwscMiB7LN8px4gPIzFZoMwY-icP1KEf91LvSq8JnyTPCVJgqrgXcvyf10rFC6aIpTDyhHaayz1P_nd6SKTuMC_yhImh3AVv9Z1-zLZjEOZoCdj5FwevKglKgeSBR8JcQkAEFV1py18KyG-yc7LTVrBz_eQ6ImtLf6kjvKPT17ZsJHqZpsjF_l3dTSOqvehKGdFeCTPe6II6TfPx-Lb0')"></div>
+<button class="absolute bottom-1 right-1 bg-primary text-white p-2 rounded-full shadow-md hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-sm">photo_camera</span>
+</button>
+</div>
+<div class="flex-1 text-center md:text-left space-y-2">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h1 class="text-3xl font-bold tracking-tight">Ola Nordmann</h1>
+<p class="text-slate-500 dark:text-slate-400">Matentusiast fra Kristiansand</p>
+</div>
+<button class="px-6 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 transition-colors shadow-md shadow-primary/20">
+                                Rediger profil
+                            </button>
+</div>
+<div class="flex flex-wrap justify-center md:justify-start gap-4 pt-2">
+<div class="flex items-center gap-1.5 text-sm text-slate-500 bg-slate-50 dark:bg-slate-800 px-3 py-1 rounded-full">
+<span class="material-symbols-outlined text-lg">mail</span>
+                                ola.nordmann@eksempel.no
+                            </div>
+<div class="flex items-center gap-1.5 text-sm text-slate-500 bg-slate-50 dark:bg-slate-800 px-3 py-1 rounded-full">
+<span class="material-symbols-outlined text-lg">calendar_today</span>
+                                Medlem siden jan. 2023
+                            </div>
+</div>
+</div>
+</section>
+<!-- Profile Info Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm text-center space-y-1">
+<span class="text-3xl font-bold text-primary">12</span>
+<p class="text-sm font-medium text-slate-500">Lagrede oppskrifter</p>
+</div>
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm text-center space-y-1">
+<span class="text-3xl font-bold text-primary">4</span>
+<p class="text-sm font-medium text-slate-500">Måltidsplaner</p>
+</div>
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm text-center space-y-1">
+<span class="text-3xl font-bold text-primary">8</span>
+<p class="text-sm font-medium text-slate-500">Mine vurderinger</p>
+</div>
+</div>
+<!-- Recent Saved Recipes -->
+<section class="space-y-6">
+<div class="flex items-center justify-between">
+<h2 class="text-2xl font-bold tracking-tight">Siste lagrede oppskrifter</h2>
+<a class="text-primary font-semibold text-sm hover:underline flex items-center gap-1" href="#">
+                            Se alle
+                            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</a>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+<!-- Recipe Card 1 -->
+<div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 group transition-all hover:shadow-md">
+<div class="relative h-48 bg-cover bg-center" data-alt="Bilde av grillet laks med sitron" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDSFd-gEXiVXrTM4Y_JipiuySbCRk5F0AOPp9JxG9Tj3FZKXOQM570i5SEVn8FseZm3Xb_QccUTOmGeDMtpOv96tRjKlqoipVzAdnl2AYngWZPUmGosgXelpNvTut00FKoINm72Gd8GgPyAS5p85jUoFXQ56vE0mdRcFUJa4fgp5416Dh6wkhb0ekLBDYyhBaLSf7ERKJyPeXGce-9Bg8nkbD8cssUGFp2rPyfLdPrxNy7z2_CXib9QyNWuo8n4IOp-mcurdqrhQnk')">
+<button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-white/90 rounded-full text-primary shadow-sm">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">favorite</span>
+</button>
+<div class="absolute bottom-3 left-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">schedule</span> 35 min
+                                </div>
+</div>
+<div class="p-4 space-y-2">
+<h3 class="font-bold text-lg leading-tight group-hover:text-primary transition-colors">Grillet laks med frisk agurksalat</h3>
+<div class="flex items-center gap-1 text-yellow-500">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="material-symbols-outlined text-lg">star_half</span>
+<span class="text-xs text-slate-400 font-medium ml-1">(42)</span>
+</div>
+</div>
+</div>
+<!-- Recipe Card 2 -->
+<div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 group transition-all hover:shadow-md">
+<div class="relative h-48 bg-cover bg-center" data-alt="Bilde av tradisjonelle norske vafler" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDWrmerbyzTigqPtG6jM90dC5cdPUPMjFwXKxYn4LmoL53wIszFom9Lf0mQFXJBnJujK1WNR4ErKTm_KCVvn-hnfRoVeJ2NiTvn0KApGxm62fKmU3DlYSnKoKQBXcZly20TeU9EMQYa-5ni2MUahxAKE_yZJqSIKL62s5s44GwP_o1QLFAadaS0wrX2jbplQ_S88-8wPNM_Y-Eua5-3s-LCfSx7C1xVegJdHLkW_Wy4Gg-EqDU1Ga4moWAaOw6H3q4J9KlcFllAcsQ')">
+<button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-white/90 rounded-full text-primary shadow-sm">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">favorite</span>
+</button>
+<div class="absolute bottom-3 left-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">schedule</span> 20 min
+                                </div>
+</div>
+<div class="p-4 space-y-2">
+<h3 class="font-bold text-lg leading-tight group-hover:text-primary transition-colors">Sprø Sørlandsvaffel med rømme</h3>
+<div class="flex items-center gap-1 text-yellow-500">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="text-xs text-slate-400 font-medium ml-1">(128)</span>
+</div>
+</div>
+</div>
+<!-- Recipe Card 3 -->
+<div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 group transition-all hover:shadow-md">
+<div class="relative h-48 bg-cover bg-center" data-alt="Frisk rekebaguette med sitron" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCPjUN-9gw6LjfdPg9EhNB-HlRUeNrbc181b1V0pthg6-ckjE2GQyyL4fEAlrEsEjoquPaxruZOX7_LEleChWxm7NDkw5CFaPwGwj2oqAIzoPUlOm9rnue2akfyX6DJfESra0ri-ZnHDpuGvrP2OiFYHT4LRAMGy6DW13dwnQ0mY7XHFFDCcUadFsp8s2cYQWhBAKdzpoYmJPy86jgpJ2rwUDWX1jPEjhloCyobVfAsWK7DCeYGTLd9y2O-Aq8Rj2d89YhM9nDDdg8')">
+<button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-white/90 rounded-full text-primary shadow-sm">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">favorite</span>
+</button>
+<div class="absolute bottom-3 left-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">schedule</span> 15 min
+                                </div>
+</div>
+<div class="p-4 space-y-2">
+<h3 class="font-bold text-lg leading-tight group-hover:text-primary transition-colors">Klassisk rekebaguette fra brygga</h3>
+<div class="flex items-center gap-1 text-yellow-500">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1">star</span>
+<span class="material-symbols-outlined text-lg">star</span>
+<span class="text-xs text-slate-400 font-medium ml-1">(56)</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Activity Feed / Notifications Placeholder -->
+<section class="bg-primary/5 border border-primary/20 rounded-xl p-6">
+<div class="flex items-start gap-4">
+<div class="bg-primary text-white p-2 rounded-lg">
+<span class="material-symbols-outlined">lightbulb</span>
+</div>
+<div>
+<h4 class="font-bold text-primary">Tips for din matreise</h4>
+<p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Vi har lagt til 5 nye oppskrifter med fersk sommerfisk som passer perfekt til dine lagrede favoritter!</p>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<div id="footer-placeholder"></div>
+
+<script>
+// Mobile menu functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+    const closeMobileMenu = document.getElementById('close-mobile-menu');
+    const header = document.querySelector('header');
+    
+    function openMobileMenu() {
+        mobileMenu.classList.remove('translate-x-full');
+        mobileMenuOverlay.classList.remove('hidden');
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+        
+        // Ensure header is visible and not affected by scroll behavior
+        if (header) {
+            header.style.transform = 'translateY(0)';
+            header.style.visibility = 'visible';
+        }
+    }
+    
+    function closeMobileMenuFn() {
+        mobileMenu.classList.add('translate-x-full');
+        mobileMenuOverlay.classList.add('hidden');
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        
+        // Reset header transform to allow scroll-based hiding to work again
+        if (header) {
+            header.style.transform = '';
+            header.style.visibility = '';
+        }
+    }
+    
+    if (mobileMenuButton) {
+        mobileMenuButton.addEventListener('click', openMobileMenu);
+    }
+    
+    if (closeMobileMenu) {
+        closeMobileMenu.addEventListener('click', closeMobileMenuFn);
+    }
+    
+    if (mobileMenuOverlay) {
+        mobileMenuOverlay.addEventListener('click', closeMobileMenuFn);
+    }
+
+    // Profile submenu toggle functionality
+    const profileToggle = document.getElementById('mobile-profile-toggle');
+    const profileSubmenu = document.getElementById('mobile-profile-submenu');
+    const profileChevron = document.getElementById('mobile-profile-chevron');
+    
+    if (profileToggle && profileSubmenu && profileChevron) {
+        profileToggle.addEventListener('click', function() {
+            const isHidden = profileSubmenu.classList.contains('hidden');
+            if (isHidden) {
+                profileSubmenu.classList.remove('hidden');
+                profileChevron.style.transform = 'rotate(180deg)';
+            } else {
+                profileSubmenu.classList.add('hidden');
+                profileChevron.style.transform = 'rotate(0deg)';
+            }
+        });
+    }
+});
+</script>
+
+</body></html>
