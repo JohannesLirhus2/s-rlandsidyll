@@ -3,6 +3,8 @@
 <html class="light" lang="no"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="description" content=""/>
+<meta name="author" content=""/>
 <title id="page-title">Sørlandsidyll - Oppskrift</title>
 <link rel="icon" type="image/png" href="assets/lime.png"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -554,6 +556,12 @@ async function loadRecipe() {
         // Update page title
         document.getElementById('page-title').textContent = `${recipe.title || 'Oppskrift'} - Sørlandsidyll`;
         
+        // Update meta description
+        const metaDescription = document.querySelector('meta[name="description"]');
+        if (metaDescription) {
+            metaDescription.setAttribute('content', recipe.description || '');
+        }
+
         // Update hero section
         document.getElementById('recipe-title').textContent = recipe.title || 'Uten tittel';
         document.getElementById('recipe-description').textContent = recipe.description || '';
@@ -1074,6 +1082,11 @@ async function loadRecipe() {
                     const publicName = authorData.public_name || authorData['public-name'] || recipe.author;
                     const authorImage = authorData.img;
                     printAuthorData = { name: publicName, image: authorImage || '' };
+
+                    const metaAuthor = document.querySelector('meta[name="author"]');
+                    if (metaAuthor) {
+                        metaAuthor.setAttribute('content', publicName);
+                    }
                     
                     // Update author link with GET parameter
                     const authorLink = document.getElementById('recipe-author-link');
@@ -1109,6 +1122,10 @@ async function loadRecipe() {
                 authorLink.href = `konto.html?author=${encodeURIComponent(recipe.author)}`;
                 document.getElementById('author-name').textContent = recipe.author;
                 printAuthorData = { name: recipe.author, image: '' };
+                const metaAuthor = document.querySelector('meta[name="author"]');
+                if (metaAuthor) {
+                    metaAuthor.setAttribute('content', recipe.author);
+                }
             }
         } else {
             document.getElementById('recipe-author-link').style.display = 'none';
