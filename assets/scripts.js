@@ -1,10 +1,12 @@
-tailwind.config = {
+window.tailwind = window.tailwind || {};
+window.tailwind.config = {
     darkMode: "class",
     theme: {
         extend: {
             colors: {
-                "primary": "#334155", // Deep slate blue accent
-                "accent": "#0d9488", // Calm teal
+                "primary": "#5e4b3b", // Deep slate blue accent
+                "accent": "#616f43", // Calm teal
+                "accent-hover": "#414930", // Lighter accent for hover
                 "background-light": "#ffffff",
                 "slate-custom": "#f8fafc"
             },
