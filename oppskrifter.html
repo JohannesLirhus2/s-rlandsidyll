@@ -176,6 +176,10 @@ Søk
 import { db } from './assets/firebase.js';
 import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
 
+// Global map for author username -> public name
+let authorsMap = {};
+let categoriesMap = {}; // Map category ID to name
+
 // Load categories from Firebase
 async function loadCategories() {
     try {
@@ -191,6 +195,10 @@ async function loadCategories() {
             const categoryName = categoryData.name; // e.g., "Bakst"
             const isActive = categoryData.active || false;
             
+            // Store in categoriesMap for displaying category names
+            categoriesMap[categoryId] = categoryName;
+            console.log('Stored in map:', categoryId, '->', categoryName);
+            
             if (!isActive) return; // Skip inactive categories
             
             const option = document.createElement('option');
@@ -201,6 +209,7 @@ async function loadCategories() {
     } catch (error) {
         console.error('Error loading categories:', error);
     }
+    console.log('Final categoriesMap:', categoriesMap);
 }
 
 // Filter dropdown functionality
@@ -252,9 +261,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             snapshot.forEach((doc) => {
                 const authorId = doc.id;
                 const authorData = doc.data();
-                // Only include authors where is_author is true
+                const publicName = authorData['public-name'] || authorData.public_name || authorId;
+                
+                // Store in global map for display
+                authorsMap[authorId] = publicName;
+                
+                // Only include authors where is_author is true in the filter dropdown
                 if (authorData['is_author'] === true) {
-                    const publicName = authorData['public-name'] || authorId;
                     authors.push({
                         id: authorId,
                         name: publicName
@@ -294,6 +307,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (authorFilter) authorFilter.value = '';
             if (sortSelect) sortSelect.value = 'date';
             
+            // Clear search fields
+            const headerSearchInput = document.getElementById('headerSearchInput');
+            const mobileSearchInput = document.getElementById('mobileSearchInput');
+            if (headerSearchInput) headerSearchInput.value = '';
+            if (mobileSearchInput) mobileSearchInput.value = '';
+            
+            // Remove search query from URL
+            const url = new URL(window.location);
+            url.searchParams.delete('q');
+            window.history.replaceState({}, '', url);
+            
             // Display all recipes again
             displayRecipes(allRecipes);
             
@@ -319,6 +343,28 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Load and display recipes
     await loadRecipes();
+    
+    // Check for search query in URL and populate search fields
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchQuery = urlParams.get('q');
+    if (searchQuery) {
+        console.log('Search query from URL:', searchQuery);
+        
+        // Populate search fields in header (wait for header to load)
+        setTimeout(() => {
+            const headerSearchInput = document.getElementById('headerSearchInput');
+            const mobileSearchInput = document.getElementById('mobileSearchInput');
+            
+            if (headerSearchInput) {
+                headerSearchInput.value = searchQuery;
+            }
+            if (mobileSearchInput) {
+                mobileSearchInput.value = searchQuery;
+            }
+        }, 100);
+        
+        // Note: Search will be applied in applyFilters() which is called after display
+    }
 });
 
 let allRecipes = [];
@@ -346,7 +392,9 @@ async function loadRecipes() {
         });
         
         console.log('Loaded recipes:', allRecipes.length);
-        displayRecipes(allRecipes);
+        
+        // Check for search query and apply filters
+        applyFilters();
     } catch (error) {
         console.error('Error loading recipes:', error);
         const recipesContainer = document.getElementById('recipesContainer');
@@ -374,6 +422,41 @@ function displayRecipes(recipes) {
         
         const imgUrl = recipe.img_url || 'https://via.placeholder.com/300x200?text=Ingen+bilde';
         
+        // Get author display name
+        const authorDisplayName = recipe.author ? (authorsMap[recipe.author] || recipe.author) : 'Ukjent forfatter';
+        
+        // Get first category name
+        let categoryName = '';
+        
+        // Check categories array first (new format)
+        if (recipe.categories && Array.isArray(recipe.categories) && recipe.categories.length > 0) {
+            const firstCategory = recipe.categories[0];
+            let categoryId = typeof firstCategory === 'string' ? firstCategory : firstCategory.category;
+            
+            console.log('Recipe:', recipe.title, 'Category data (array):', firstCategory, 'Extracted ID:', categoryId);
+            
+            // Ensure categoryId has 't' prefix for lookup
+            if (categoryId && !categoryId.startsWith('t')) {
+                categoryId = 't' + categoryId;
+            }
+            
+            categoryName = categoriesMap[categoryId] || '';
+            console.log('Looking up:', categoryId, 'Found:', categoryName);
+        }
+        // Fall back to singular category field (old format)
+        else if (recipe.category) {
+            let categoryId = recipe.category;
+            console.log('Recipe:', recipe.title, 'Category data (singular):', categoryId);
+            
+            // Ensure categoryId has 't' prefix for lookup
+            if (categoryId && !categoryId.startsWith('t')) {
+                categoryId = 't' + categoryId;
+            }
+            
+            categoryName = categoriesMap[categoryId] || '';
+            console.log('Looking up:', categoryId, 'Found:', categoryName);
+        }
+        
         recipeLink.innerHTML = `
             <div class="aspect-[4/3] bg-slate-100 overflow-hidden">
                 <img src="${imgUrl}" alt="${recipe.title || 'Oppskrift'}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
@@ -382,8 +465,8 @@ function displayRecipes(recipes) {
                 <h3 class="font-serif text-lg font-bold text-slate-800 mb-2">${recipe.title || 'Uten tittel'}</h3>
                 ${recipe.description ? `<p class="text-xs text-slate-600 mb-3 line-clamp-2">${recipe.description}</p>` : ''}
                 <div class="flex items-center justify-between text-xs text-slate-500">
-                    <span>${recipe.author || 'Ukjent forfatter'}</span>
-                    ${recipe.base_portions ? `<span>${recipe.base_portions} porsjoner</span>` : ''}
+                    <span>${authorDisplayName}</span>
+                    ${categoryName ? `<span>${categoryName}</span>` : ''}
                 </div>
             </div>
         `;
@@ -399,14 +482,133 @@ function applyFilters() {
     const selectedCategory = categoryFilter ? categoryFilter.value : '';
     const selectedAuthor = authorFilter ? authorFilter.value : '';
     
-    console.log('Filtering by category:', selectedCategory, 'and author:', selectedAuthor);
+    // Get search query from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchQuery = urlParams.get('q');
+    
+    console.log('Filtering by category:', selectedCategory, 'author:', selectedAuthor, 'search:', searchQuery);
     
     let filteredRecipes = [...allRecipes];
     
+    // Apply search filter first (comprehensive search)
+    if (searchQuery && searchQuery.trim() !== '') {
+        const query = searchQuery.toLowerCase().trim();
+        filteredRecipes = filteredRecipes.filter(recipe => {
+            // Search in title
+            if (recipe.title && recipe.title.toLowerCase().includes(query)) {
+                return true;
+            }
+            
+            // Search in description
+            if (recipe.description && recipe.description.toLowerCase().includes(query)) {
+                return true;
+            }
+            
+            // Search in author
+            if (recipe.author && recipe.author.toLowerCase().includes(query)) {
+                return true;
+            }
+            
+            // Search in ingredient titles (old format)
+            if (recipe.ingr_title && Array.isArray(recipe.ingr_title)) {
+                if (recipe.ingr_title.some(title => title && title.toLowerCase().includes(query))) {
+                    return true;
+                }
+            }
+            
+            // Search in ingredient sections (new format)
+            if (recipe.ingredient_sections && Array.isArray(recipe.ingredient_sections)) {
+                for (const section of recipe.ingredient_sections) {
+                    // Search section title
+                    if (section.title && section.title.toLowerCase().includes(query)) {
+                        return true;
+                    }
+                    // Search ingredients in section
+                    if (section.ingredients && Array.isArray(section.ingredients)) {
+                        if (section.ingredients.some(ing => 
+                            (ing.title && ing.title.toLowerCase().includes(query)) ||
+                            (ing.unit && ing.unit.toLowerCase().includes(query))
+                        )) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            
+            // Search in instructions (old format)
+            if (recipe.instr && Array.isArray(recipe.instr)) {
+                if (recipe.instr.some(instr => instr && instr.toLowerCase().includes(query))) {
+                    return true;
+                }
+            }
+            
+            // Search in instruction sections (new format)
+            if (recipe.instruction_sections && Array.isArray(recipe.instruction_sections)) {
+                for (const section of recipe.instruction_sections) {
+                    // Search section title
+                    if (section.title && section.title.toLowerCase().includes(query)) {
+                        return true;
+                    }
+                    // Search instructions in section
+                    if (section.instructions && Array.isArray(section.instructions)) {
+                        if (section.instructions.some(instr => 
+                            instr.text && instr.text.toLowerCase().includes(query)
+                        )) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            
+            // Search in global tips
+            if (recipe.global_tips && Array.isArray(recipe.global_tips)) {
+                if (recipe.global_tips.some(tip => tip && tip.toLowerCase().includes(query))) {
+                    return true;
+                }
+            }
+            
+            return false;
+        });
+        console.log('After search filter:', filteredRecipes.length);
+    }
+    
     // Filter by category
     if (selectedCategory) {
-        const categoryField = 't' + selectedCategory; // e.g., 'tbakst'
-        filteredRecipes = filteredRecipes.filter(recipe => recipe[categoryField] === true);
+        const filterCategoryId = 't' + selectedCategory; // e.g., 'tbakst'
+        console.log('Filtering by category ID:', filterCategoryId);
+        filteredRecipes = filteredRecipes.filter(recipe => {
+            // Check categories array (new format)
+            if (recipe.categories && Array.isArray(recipe.categories) && recipe.categories.length > 0) {
+                const hasMatch = recipe.categories.some(cat => {
+                    let categoryId = typeof cat === 'string' ? cat : cat.category;
+                    
+                    console.log('Checking recipe:', recipe.title, 'category (array):', cat, 'extracted:', categoryId);
+                    
+                    if (categoryId && !categoryId.startsWith('t')) {
+                        categoryId = 't' + categoryId;
+                    }
+                    
+                    return categoryId === filterCategoryId;
+                });
+                console.log('Recipe', recipe.title, 'match (array):', hasMatch);
+                return hasMatch;
+            }
+            // Check singular category field (old format)
+            else if (recipe.category) {
+                let categoryId = recipe.category;
+                console.log('Checking recipe:', recipe.title, 'category (singular):', categoryId);
+                
+                if (categoryId && !categoryId.startsWith('t')) {
+                    categoryId = 't' + categoryId;
+                }
+                
+                const hasMatch = categoryId === filterCategoryId;
+                console.log('Recipe', recipe.title, 'match (singular):', hasMatch);
+                return hasMatch;
+            }
+            
+            return false;
+        });
         console.log('After category filter:', filteredRecipes.length);
     }
     

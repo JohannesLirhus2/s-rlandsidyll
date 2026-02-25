@@ -82,6 +82,58 @@ function initializeHeader() {
             }
         });
     }
+    
+    // Search functionality - Desktop
+    const headerSearchInput = document.getElementById("headerSearchInput");
+    const headerSearchButton = document.getElementById("headerSearchButton");
+    
+    function performSearch(searchQuery) {
+        if (searchQuery && searchQuery.trim() !== '') {
+            const encodedQuery = encodeURIComponent(searchQuery.trim());
+            window.location.href = `oppskrifter.html?q=${encodedQuery}`;
+        } else {
+            window.location.href = 'oppskrifter.html';
+        }
+    }
+    
+    if (headerSearchInput) {
+        // Search on Enter key
+        headerSearchInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                console.log("🔍 Desktop search - Enter key pressed");
+                performSearch(headerSearchInput.value);
+            }
+        });
+        console.log("✅ Desktop search input handler attached");
+    }
+    
+    if (headerSearchButton) {
+        // Search on button click
+        headerSearchButton.addEventListener("click", (e) => {
+            e.preventDefault();
+            console.log("🔍 Desktop search - Button clicked");
+            if (headerSearchInput) {
+                performSearch(headerSearchInput.value);
+            }
+        });
+        console.log("✅ Desktop search button handler attached");
+    }
+    
+    // Search functionality - Mobile
+    const mobileSearchInput = document.getElementById("mobileSearchInput");
+    
+    if (mobileSearchInput) {
+        // Search on Enter key
+        mobileSearchInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                console.log("🔍 Mobile search - Enter key pressed");
+                performSearch(mobileSearchInput.value);
+            }
+        });
+        console.log("✅ Mobile search input handler attached");
+    }
 }
 
 // Auth state handler

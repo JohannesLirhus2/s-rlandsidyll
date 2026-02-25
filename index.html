@@ -54,7 +54,7 @@
 <main>
 <section class="relative bg-slate-900 overflow-hidden border-b border-slate-200">
 <div class="absolute inset-0 z-0 opacity-40">
-<img alt="Sørlandsidyll mat" class="w-full h-full object-cover" src="assets/skibbu.png"/>
+<img alt="Sørlandsidyll mat" class="w-full h-full object-cover" src="assets/skibbu.webp"/>
 </div>
 <div class="relative z-10 max-w-7xl mx-auto px-4 py-12 md:py-16 text-center">
 <h1 class="text-4xl md:text-5xl font-bold text-white mb-6" style="display: none;">Smaken av <span class="italic text-accent">Sørlandet</span></h1>
@@ -162,6 +162,28 @@
 import { db } from './assets/firebase.js';
 import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
 
+// Global map for author username -> public name
+let authorsMap = {};
+
+// Load authors collection
+async function loadAuthors() {
+    try {
+        const authorsRef = collection(db, 'authors');
+        const authorsSnapshot = await getDocs(authorsRef);
+        
+        authorsSnapshot.forEach((doc) => {
+            const authorId = doc.id;
+            const authorData = doc.data();
+            const publicName = authorData['public-name'] || authorData.public_name || authorId;
+            authorsMap[authorId] = publicName;
+        });
+        
+        console.log('Authors loaded:', Object.keys(authorsMap).length);
+    } catch (error) {
+        console.error('Error loading authors:', error);
+    }
+}
+
 // Load filters from cathegories collection
 async function loadFilters() {
     try {
@@ -179,6 +201,10 @@ async function loadFilters() {
             const categoryId = doc.id; // e.g., "tbakst"
             const categoryName = categoryData.name; // e.g., "Bakst"
             const isActive = categoryData.active || false;
+            
+            // Store in categoriesMap for displaying category names
+            categoriesMap[categoryId] = categoryName;
+            console.log('Stored in map:', categoryId, '->', categoryName);
             
             if (!isActive) return; // Skip inactive categories
             
@@ -205,10 +231,21 @@ async function loadFilters() {
     } catch (error) {
         console.error('Error loading filters:', error);
     }
+    console.log('Final categoriesMap:', categoriesMap);
 }
 
-// Load filters on page load
-loadFilters();
+// Load data on page load
+(async function() {
+    await loadAuthors();
+    await loadFilters();
+    await loadRecipes();
+    setupFilterHandlers(); // Set up click handlers after filters are loaded
+})();
+
+// Store all recipes globally for filtering
+let allRecipes = [];
+let currentFilter = null; // null means show all
+let categoriesMap = {}; // Map category ID to name
 
 // Load recipes
 async function loadRecipes() {
@@ -226,44 +263,33 @@ async function loadRecipes() {
             return;
         }
         
-        recipesContainer.innerHTML = '';
-        
-        // Load up to 8 recipes for the homepage
-        let count = 0;
-        const maxRecipes = 8;
+        // Store all recipes for filtering
+        allRecipes = [];
         
         snapshot.forEach((doc) => {
-            if (count >= maxRecipes) return;
-            
             const recipe = doc.data();
             const recipeId = doc.id;
             
             // Skip deleted recipes
             if (recipe.deleted === true) return;
             
-            const recipeLink = document.createElement('a');
-            recipeLink.href = `oppskrift.html?id=${recipeId}`;
-            recipeLink.className = 'block bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 group';
-            
-            const imgUrl = recipe.img_url || 'https://via.placeholder.com/300x200?text=Ingen+bilde';
-            
-            recipeLink.innerHTML = `
-                <div class="aspect-[4/3] bg-slate-100 overflow-hidden">
-                    <img src="${imgUrl}" alt="${recipe.title || 'Oppskrift'}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
-                </div>
-                <div class="p-4">
-                    <h3 class="font-serif text-lg font-bold text-slate-800 mb-2">${recipe.title || 'Uten tittel'}</h3>
-                    ${recipe.description ? `<p class="text-xs text-slate-600 mb-3 line-clamp-2">${recipe.description}</p>` : ''}
-                    <div class="flex items-center justify-between text-xs text-slate-500">
-                        <span>${recipe.author || 'Ukjent forfatter'}</span>
-                        ${recipe.base_portions ? `<span>${recipe.base_portions} porsjoner</span>` : ''}
-                    </div>
-                </div>
-            `;
-            
-            recipesContainer.appendChild(recipeLink);
-            count++;
+            // Store recipe with its ID
+            allRecipes.push({
+                id: recipeId,
+                ...recipe
+            });
         });
+        
+        console.log('Total recipes loaded:', allRecipes.length);
+        
+        // Log first recipe to see structure
+        if (allRecipes.length > 0) {
+            console.log('Sample recipe structure:', allRecipes[0]);
+            console.log('Sample recipe categories field:', allRecipes[0].categories);
+        }
+        
+        // Display filtered or all recipes
+        displayFilteredRecipes();
     } catch (error) {
         console.error('Error loading recipes:', error);
         const recipesContainer = document.getElementById('recipesContainer');
@@ -273,23 +299,239 @@ async function loadRecipes() {
     }
 }
 
-// Load recipes on page load
-loadRecipes();
+// Display recipes based on current filter
+function displayFilteredRecipes() {
+    const recipesContainer = document.getElementById('recipesContainer');
+    if (!recipesContainer) return;
+    
+    recipesContainer.innerHTML = '';
+    
+    // Filter recipes based on currentFilter
+    let recipesToShow = allRecipes;
+    if (currentFilter) {
+        const filterCategoryId = 't' + currentFilter; // e.g., 'tbakst'
+        console.log('Filtering by ID:', filterCategoryId);
+        recipesToShow = allRecipes.filter(recipe => {
+            console.log('Recipe:', recipe.title, 'has categories:', recipe.categories, 'category:', recipe.category);
+            
+            // Check categories array (new format)
+            if (recipe.categories && Array.isArray(recipe.categories) && recipe.categories.length > 0) {
+                const hasMatch = recipe.categories.some(cat => {
+                    let categoryId = typeof cat === 'string' ? cat : cat.category;
+                    
+                    console.log('Checking category (array):', cat, 'extracted:', categoryId, 'looking for:', filterCategoryId);
+                    
+                    if (categoryId && !categoryId.startsWith('t')) {
+                        categoryId = 't' + categoryId;
+                    }
+                    
+                    return categoryId === filterCategoryId;
+                });
+                console.log('Recipe', recipe.title, 'match (array):', hasMatch);
+                return hasMatch;
+            }
+            // Check singular category field (old format)
+            else if (recipe.category) {
+                let categoryId = recipe.category;
+                console.log('Checking category (singular):', categoryId, 'looking for:', filterCategoryId);
+                
+                if (categoryId && !categoryId.startsWith('t')) {
+                    categoryId = 't' + categoryId;
+                }
+                
+                const hasMatch = categoryId === filterCategoryId;
+                console.log('Recipe', recipe.title, 'match (singular):', hasMatch);
+                return hasMatch;
+            }
+            
+            console.log('Recipe', recipe.title, 'has no category data');
+            return false;
+        });
+        console.log('Filtering by:', currentFilter, '- Found:', recipesToShow.length, 'recipes');
+    }
+    
+    if (recipesToShow.length === 0) {
+        recipesContainer.innerHTML = '<p class="col-span-full text-center text-slate-500">Ingen oppskrifter funnet for denne kategorien</p>';
+        return;
+    }
+    
+    // Limit to 8 recipes for homepage
+    const maxRecipes = 8;
+    let count = 0;
+    
+    recipesToShow.forEach((recipe) => {
+        if (count >= maxRecipes) return;
+        
+        console.log('✓ Displaying recipe:', recipe.title, 'categories:', recipe.categories);
+        
+        const recipeLink = document.createElement('a');
+        recipeLink.href = `oppskrift.html?id=${recipe.id}`;
+        recipeLink.className = 'block bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 group';
+        
+        const imgUrl = recipe.img_url || 'https://via.placeholder.com/300x200?text=Ingen+bilde';
+        
+        // Get author display name
+        const authorDisplayName = recipe.author ? (authorsMap[recipe.author] || recipe.author) : 'Ukjent forfatter';
+        
+        // Get first category name
+        let categoryName = '';
+        
+        // Check categories array first (new format)
+        if (recipe.categories && Array.isArray(recipe.categories) && recipe.categories.length > 0) {
+            const firstCategory = recipe.categories[0];
+            let categoryId = typeof firstCategory === 'string' ? firstCategory : firstCategory.category;
+            
+            console.log('Recipe:', recipe.title, 'Category data (array):', firstCategory, 'Extracted ID:', categoryId);
+            
+            // Ensure categoryId has 't' prefix for lookup
+            if (categoryId && !categoryId.startsWith('t')) {
+                categoryId = 't' + categoryId;
+            }
+            
+            categoryName = categoriesMap[categoryId] || '';
+            console.log('Looking up:', categoryId, 'Found:', categoryName);
+        }
+        // Fall back to singular category field (old format)
+        else if (recipe.category) {
+            let categoryId = recipe.category;
+            console.log('Recipe:', recipe.title, 'Category data (singular):', categoryId);
+            
+            // Ensure categoryId has 't' prefix for lookup
+            if (categoryId && !categoryId.startsWith('t')) {
+                categoryId = 't' + categoryId;
+            }
+            
+            categoryName = categoriesMap[categoryId] || '';
+            console.log('Looking up:', categoryId, 'Found:', categoryName);
+        }
+        
+        recipeLink.innerHTML = `
+            <div class="aspect-[4/3] bg-slate-100 overflow-hidden">
+                <img src="${imgUrl}" alt="${recipe.title || 'Oppskrift'}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
+            </div>
+            <div class="p-4">
+                <h3 class="font-serif text-lg font-bold text-slate-800 mb-2">${recipe.title || 'Uten tittel'}</h3>
+                ${recipe.description ? `<p class="text-xs text-slate-600 mb-3 line-clamp-2">${recipe.description}</p>` : ''}
+                <div class="flex items-center justify-between text-xs text-slate-500">
+                    <span>${authorDisplayName}</span>
+                    ${categoryName ? `<span>${categoryName}</span>` : ''}
+                </div>
+            </div>
+        `;
+        
+        recipesContainer.appendChild(recipeLink);
+        count++;
+    });
+}
+
+// Setup filter button handlers
+function setupFilterHandlers() {
+    // Get all filter buttons
+    const allButton = document.getElementById('tagFilter-all');
+    const tagFilterButtons = document.querySelectorAll('.tag-filter');
+    
+    console.log('Setting up filter handlers - Found', tagFilterButtons.length, 'filter buttons');
+    
+    // \"Alt\" button - show all recipes
+    if (allButton) {
+        allButton.addEventListener('click', function() {
+            console.log('All button clicked');
+            currentFilter = null;
+            displayFilteredRecipes();
+            updateFilterButtonStyles(null);
+        });
+    }
+    
+    // Tag filter buttons
+    tagFilterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const tag = this.getAttribute('data-tag');
+            console.log('Filter button clicked:', tag);
+            if (tag) {
+                currentFilter = tag;
+                displayFilteredRecipes();
+                updateFilterButtonStyles(tag);
+            }
+        });
+    });
+}
+
+// Update button styles to show active filter
+function updateFilterButtonStyles(activeTag) {
+    const allButton = document.getElementById('tagFilter-all');
+    const tagFilterButtons = document.querySelectorAll('.tag-filter');
+    
+    // Update \"Alt\" button
+    if (allButton) {
+        if (activeTag === null) {
+            allButton.className = 'whitespace-nowrap px-4 py-1.5 bg-accent text-white rounded-lg text-xs font-bold uppercase tracking-wider';
+        } else {
+            allButton.className = 'whitespace-nowrap px-4 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors';
+        }
+    }
+    
+    // Update tag filter buttons
+    tagFilterButtons.forEach(button => {
+        const tag = button.getAttribute('data-tag');
+        const isBanner = button.getAttribute('data-banner') === 'true';
+        
+        if (tag === activeTag) {
+            // Active state
+            if (isBanner) {
+                button.className = 'tag-filter tag-filter-active-banner px-3 py-1 bg-accent text-white rounded-full text-xs font-medium transition-colors border border-accent';
+            } else {
+                button.className = 'tag-filter whitespace-nowrap px-4 py-1.5 bg-accent text-white rounded-lg text-xs font-bold uppercase tracking-wider';
+            }
+        } else {
+            // Inactive state
+            if (isBanner) {
+                button.className = 'tag-filter px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-medium transition-colors border border-white/20';
+            } else {
+                button.className = 'tag-filter whitespace-nowrap px-4 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors';
+            }
+        }
+    });
+}
 
 // Search functionality (runs on DOMContentLoaded)
 document.addEventListener('DOMContentLoaded', function() {
-    function performSearch(searchInputId) {
-        const input = document.getElementById(searchInputId);
+    // Check for search query in URL and populate search fields
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchQuery = urlParams.get('q');
+    if (searchQuery) {
+        console.log('Search query from URL:', searchQuery);
+        
+        // Populate search fields in header (wait for header to load)
+        setTimeout(() => {
+            const headerSearchInput = document.getElementById('headerSearchInput');
+            const mobileSearchInput = document.getElementById('mobileSearchInput');
+            const bannerSearchInput = document.getElementById('searchInput');
+            
+            if (headerSearchInput) {
+                headerSearchInput.value = searchQuery;
+            }
+            if (mobileSearchInput) {
+                mobileSearchInput.value = searchQuery;
+            }
+            if (bannerSearchInput) {
+                bannerSearchInput.value = searchQuery;
+            }
+        }, 100);
+    }
+    
+    // Banner search functionality (specific to index.html)
+    function performBannerSearch() {
+        const input = document.getElementById('searchInput');
         if (input && input.value.trim()) {
             const searchQuery = encodeURIComponent(input.value.trim());
-            window.location.href = `oppskrifter.html?search=${searchQuery}`;
+            window.location.href = `oppskrifter.html?q=${searchQuery}`;
         }
     }
 
     // Banner search button
     const bannerSearchButton = document.getElementById('searchButton');
     if (bannerSearchButton) {
-        bannerSearchButton.addEventListener('click', () => performSearch('searchInput'));
+        bannerSearchButton.addEventListener('click', performBannerSearch);
     }
 
     // Banner search input - Enter key
@@ -297,33 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (bannerSearchInput) {
         bannerSearchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                performSearch('searchInput');
-            }
-        });
-    }
-
-    // Header search button
-    const headerSearchButton = document.getElementById('headerSearchButton');
-    if (headerSearchButton) {
-        headerSearchButton.addEventListener('click', () => performSearch('headerSearchInput'));
-    }
-
-    // Header search input - Enter key
-    const headerSearchInput = document.getElementById('headerSearchInput');
-    if (headerSearchInput) {
-        headerSearchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                performSearch('headerSearchInput');
-            }
-        });
-    }
-
-    // Mobile search input - Enter key
-    const mobileSearchInput = document.getElementById('mobileSearchInput');
-    if (mobileSearchInput) {
-        mobileSearchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                performSearch('mobileSearchInput');
+                performBannerSearch();
             }
         });
     }
