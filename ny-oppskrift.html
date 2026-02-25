@@ -1577,6 +1577,8 @@ document.addEventListener('click', (e) => {
 
 // Drag and drop functionality
 let draggedElement = null;
+let touchStartY = 0;
+let touchScrollStart = 0;
 
 document.getElementById('ingredients-container').addEventListener('dragstart', (e) => {
     if (e.target.classList.contains('ingredient-row')) {
@@ -1652,6 +1654,71 @@ document.getElementById('ingredients-container').addEventListener('drop', (e) =>
         // Drop before the target element (can be before/after section headers)
         container.insertBefore(draggedElement, afterElement);
     }
+});
+
+// Touch support for mobile drag and drop
+document.getElementById('ingredients-container').addEventListener('touchstart', (e) => {
+    if (e.target.closest('.ingredient-row')) {
+        draggedElement = e.target.closest('.ingredient-row');
+        touchStartY = e.touches[0].clientY;
+        touchScrollStart = window.scrollY;
+        draggedElement.style.opacity = '0.5';
+        draggedElement.style.zIndex = '1000';
+    }
+});
+
+document.getElementById('ingredients-container').addEventListener('touchmove', (e) => {
+    if (!draggedElement) return;
+    
+    // Get current touch position
+    const touchY = e.touches[0].clientY + window.scrollY - touchScrollStart;
+    const container = document.getElementById('ingredients-container');
+    const afterElement = getDragAfterElement(container, touchY);
+    
+    // Clear all border indicators
+    container.querySelectorAll('.ingredient-row, .section-header').forEach(el => {
+        el.style.borderTop = '';
+        el.style.borderBottom = '';
+    });
+    
+    if (afterElement == null) {
+        // Add visual indicator at the end
+        const allChildren = Array.from(container.children);
+        const lastChild = allChildren[allChildren.length - 1];
+        if (lastChild && lastChild !== draggedElement) {
+            lastChild.style.borderBottom = '2px solid #3b82f6';
+        }
+    } else {
+        // Add indicator above the element we're hovering over
+        afterElement.style.borderTop = '2px solid #3b82f6';
+    }
+}, { passive: true });
+
+document.getElementById('ingredients-container').addEventListener('touchend', (e) => {
+    if (!draggedElement) return;
+    
+    draggedElement.style.opacity = '1';
+    draggedElement.style.zIndex = '';
+    
+    // Get final touch position
+    const touchY = e.changedTouches[0].clientY + window.scrollY - touchScrollStart;
+    const container = document.getElementById('ingredients-container');
+    const afterElement = getDragAfterElement(container, touchY);
+    
+    // Clear all border indicators
+    container.querySelectorAll('.ingredient-row, .section-header').forEach(el => {
+        el.style.borderTop = '';
+        el.style.borderBottom = '';
+    });
+    
+    // Insert at the correct position
+    if (afterElement == null) {
+        container.appendChild(draggedElement);
+    } else {
+        container.insertBefore(draggedElement, afterElement);
+    }
+    
+    draggedElement = null;
 });
 
 function getDragAfterElement(container, y) {
