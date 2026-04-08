@@ -1,3 +1,24 @@
+
+
+
+/*
+
+
+    DENNE KODEN ER UNDER UTVIKLING!
+
+    Denne versjonen er ikkje publisert til Github per no, og er ikkje ferdig utvikla. 
+    Dersom ein publiserer denne versjonen til main, vil det ikkje fungere - og sida vil gå ned. 
+
+
+
+
+*/
+
+
+
+
+
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
 import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
@@ -24,6 +45,7 @@ export { auth, db };
 // Store all recipes globally for filtering
 let allRecipes = [];
 let currentTag = null;
+let currentAuthor = "";
 
 // Function to load recipes from Firebase
 export async function loadRecipes() {
@@ -58,30 +80,17 @@ export async function loadRecipes() {
 // Function to search recipes with client-side filtering
 export async function searchRecipes(searchQuery = "", tag = null, author = null) {
     let recipes = allRecipes;
-    
-    // Map tag names to their corresponding boolean field names
-    const tagFieldMap = {
-        "bakst": "tbakst",
-        "dessert": "tdessert",
-        "middag": "tmiddag",
-        "tilbehør": "ttilbehør"
-    };
-    
-    // Filter by tag if provided
-    if (tag) {
-        const fieldName = tagFieldMap[tag.toLowerCase()];
-        if (fieldName) {
-            recipes = recipes.filter(recipe => recipe[fieldName] === true);
-        } else {
-            return [];
-        }
-    }
 
     if (author && author.trim() !== "") {
         const authorQuery = author.toLowerCase().trim();
         recipes = recipes.filter(recipe => (recipe.author || "").toLowerCase() === authorQuery);
     }
     
+    //Filter by tag
+    if (tag) {
+    recipes = recipes.filter(recipe => recipe[tag.toLowerCase()] === true);
+}
+
     // Filter by text search if provided
     if (searchQuery && searchQuery.trim() !== "") {
         const lowerQuery = searchQuery.toLowerCase().trim();
@@ -95,29 +104,6 @@ export async function searchRecipes(searchQuery = "", tag = null, author = null)
     return recipes;
 }
 
-// Function to filter recipes based on boolean tag fields (client-side fallback)
-export function filterRecipes(query = "", tag = null) {
-    let filtered = allRecipes;
-    
-    // Filter by tag if provided (based on boolean fields)
-    if (tag) {
-        const tagFieldMap = {
-            "bakst": "tbakst",
-            "dessert": "tdessert",
-            "middag": "tmiddag",
-            "tilbehør": "ttilbehør"
-        };
-        const fieldName = tagFieldMap[tag.toLowerCase()];
-        
-        if (fieldName) {
-            filtered = filtered.filter((recipe) => recipe[fieldName] === true);
-        }
-    }
-    
-    // Note: Text search is not supported with server-side only approach
-    
-    return filtered;
-}
 
 // Function to render recipes in the container
 export function renderRecipes(recipes) {
@@ -126,11 +112,13 @@ export function renderRecipes(recipes) {
     
     container.innerHTML = "";
     
+    //Ingen oppskrifter beskjed
     if (recipes.length === 0) {
         container.innerHTML = '<div class="col-span-full text-center py-12"><p class="text-slate-500 text-sm">Ingen oppskrifter funnet.</p></div>';
         return;
     }
     
+    //Oppskrifter loop
     recipes.forEach((recipe) => {
         const recipeCard = document.createElement("a");
         recipeCard.href = `oppskrift.html?id=${recipe.id}`;
@@ -158,16 +146,22 @@ export function renderRecipes(recipes) {
     });
 }
 
-// Initialize recipes on page load
-window.addEventListener("DOMContentLoaded", async () => {
-    allRecipes = await loadRecipes();
-    
-    // Check for search query in URL parameters
+//Global søkefunksjon
+export async function searchAndRenderRecipes(query = "", tag = null, author = null){
+    renderRecipes(await searchRecipes(query, tag, author));
+}
+
+//Check for URL parameters.
+async function URL_params_search() {
     const urlParams = new URLSearchParams(window.location.search);
-    const searchQuery = urlParams.get('q');
-    const authorQuery = urlParams.get('author');
-    
-    if (searchQuery || authorQuery) {
+    const searchQuery = urlParams.get('q') || "";
+    const authorQuery = urlParams.get('author') || "";
+    const tagQuery = urlParams.get('tag') || "";
+
+    currentAuthor = authorQuery;
+    currentTag = tagQuery && tagQuery.trim() !== "" ? tagQuery.toLowerCase().trim() : currentTag;
+
+    if (searchQuery || authorQuery || tagQuery) {
         // If there's a search query, perform the search
         const searchInput = document.getElementById("searchInput");
         const headerSearchInput = document.getElementById("headerSearchInput");
@@ -178,13 +172,25 @@ window.addEventListener("DOMContentLoaded", async () => {
         if (headerSearchInput) {
             headerSearchInput.value = searchQuery;
         }
-        
-        const recipes = await searchRecipes(searchQuery || "", currentTag, authorQuery || "");
+
+        const recipes = await searchRecipes(searchQuery || "", currentTag, currentAuthor || "");
         renderRecipes(recipes);
     } else {
         // Otherwise, render all recipes
         renderRecipes(allRecipes);
     }
+}
+        
+
+// MAIN function
+window.addEventListener("DOMContentLoaded", async () => {
+    
+    //Loading recipes
+    allRecipes = await loadRecipes();
+
+    //Sjekker etter søkeord i URL og filtrerer. 
+    await URL_params_search();
+     
     
     // Set up search functionality
     const searchInput = document.getElementById("searchInput");
@@ -192,60 +198,47 @@ window.addEventListener("DOMContentLoaded", async () => {
     const headerSearchButton = document.getElementById("headerSearchButton");
     const searchButton = document.getElementById("searchButton");
     
-    // Function to perform search
-    const performSearch = async (query) => {
-        const recipes = await searchRecipes(query, currentTag, authorQuery || "");
-        renderRecipes(recipes);
-    };
     
-    // Function to navigate with search query
-    const navigateWithSearch = (query) => {
-        if (query && query.trim() !== "") {
-            window.location.href = `index.html?q=${encodeURIComponent(query.trim())}`;
-        } else {
-            window.location.href = 'index.html';
-        }
-    };
-    
+    //Add event listeners hero section search
     if (searchInput && searchButton) {
         // Search on button click
         searchButton.addEventListener("click", async () => {
             const query = searchInput.value;
-            await performSearch(query);
+            await searchAndRenderRecipes(query);
         });
         
         // Search on Enter key
         searchInput.addEventListener("keypress", async (e) => {
             if (e.key === "Enter") {
                 const query = searchInput.value;
-                await performSearch(query);
+                await searchAndRenderRecipes(query);
             }
         });
         
         // Search as user types (only for hero section search)
         searchInput.addEventListener("input", async () => {
             const query = searchInput.value;
-            await performSearch(query);
+            await searchAndRenderRecipes(query);
         });
     }
     
-    // Set up header search functionality
+    // Add event listners for header searchbox
     if (headerSearchInput) {
         // Navigate on Enter key
         headerSearchInput.addEventListener("keypress", (e) => {
             if (e.key === "Enter") {
                 const query = headerSearchInput.value;
-                navigateWithSearch(query);
+                if (query?.trim()) window.location.href = `https://sørlandsidyll.no/?q=${encodeURIComponent(query.trim())}`;
             }
         });
-    }
-    
-    // Set up header search button
+     
+         // Header search button
     if (headerSearchButton) {
         headerSearchButton.addEventListener("click", () => {
             const query = headerSearchInput ? headerSearchInput.value : "";
-            navigateWithSearch(query);
+            if (query?.trim()) window.location.href = `https://sørlandsidyll.no/?q=${encodeURIComponent(query.trim())}`;
         });
+    }
     }
     
     // Set up tag filter buttons
@@ -312,7 +305,7 @@ window.addEventListener("DOMContentLoaded", async () => {
             // Re-apply search with Firebase query
             const searchInput = document.getElementById("searchInput");
             const query = searchInput ? searchInput.value : "";
-            const recipes = await searchRecipes(query, currentTag);
+            const recipes = await searchRecipes(query, currentTag, currentAuthor || "");
             renderRecipes(recipes);
         });
     });
@@ -339,7 +332,7 @@ window.addEventListener("DOMContentLoaded", async () => {
             // Re-apply search with Firebase query
             const searchInput = document.getElementById("searchInput");
             const query = searchInput ? searchInput.value : "";
-            const recipes = await searchRecipes(query, null);
+            const recipes = await searchRecipes(query, null, currentAuthor || "");
             renderRecipes(recipes);
         });
     }
