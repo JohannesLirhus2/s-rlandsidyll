@@ -77,8 +77,8 @@ export async function loadRecipes() {
     }
 }
 
-// Function to search recipes with client-side filtering
-export async function searchRecipes(searchQuery = "", tag = null, author = null) {
+// Function to search recipes with client-side filtering )(fjerna export keywrd før func)
+async function searchRecipes(searchQuery = "", tag = null, author = null) {
     let recipes = allRecipes;
 
     if (author && author.trim() !== "") {
@@ -105,8 +105,8 @@ export async function searchRecipes(searchQuery = "", tag = null, author = null)
 }
 
 
-// Function to render recipes in the container
-export function renderRecipes(recipes) {
+// Function to render recipes in the container (fjerna export keywrd før func)
+function renderRecipes(recipes) {
     const container = document.getElementById("recipesContainer");
     if (!container) return;
     
@@ -305,8 +305,9 @@ window.addEventListener("DOMContentLoaded", async () => {
             // Re-apply search with Firebase query
             const searchInput = document.getElementById("searchInput");
             const query = searchInput ? searchInput.value : "";
-            const recipes = await searchRecipes(query, currentTag, currentAuthor || "");
-            renderRecipes(recipes);
+            /*const recipes = await searchRecipes(query, currentTag, currentAuthor || "");
+            renderRecipes(recipes);*/
+            await searchAndRenderRecipes(query, currentTag, currentAuthor || "");
         });
     });
     
@@ -332,8 +333,8 @@ window.addEventListener("DOMContentLoaded", async () => {
             // Re-apply search with Firebase query
             const searchInput = document.getElementById("searchInput");
             const query = searchInput ? searchInput.value : "";
-            const recipes = await searchRecipes(query, null, currentAuthor || "");
-            renderRecipes(recipes);
+            await searchAndRenderRecipes(query, null, currentAuthor || "");
+            
         });
     }
 });
