@@ -1,5 +1,5 @@
 
-
+//Ferdig (?) gjennomgått!
 
 /*
 
@@ -13,7 +13,6 @@
 
 
 */
-
 
 
 
@@ -41,6 +40,67 @@ const db = getFirestore(app);
 
 // Export auth and db for use in other modules
 export { auth, db };
+
+const userAccessCache = new Map();
+const authorDataCache = new Map();
+
+export async function getUserAccess(uid) {
+    if (!uid) {
+        return null;
+    }
+
+    if (!userAccessCache.has(uid)) {
+        userAccessCache.set(uid, (async () => {
+            try {
+                const userAccessRef = doc(db, "user_access", uid);
+                const userAccessDoc = await getDoc(userAccessRef);
+
+                if (userAccessDoc.exists()) {
+                    return userAccessDoc.data();
+                }
+
+                console.log("No user_access document found for UID:", uid);
+                return null;
+            } catch (error) {
+                console.error("Error fetching user access:", error);
+                userAccessCache.delete(uid);
+                return null;
+            }
+        })());
+    }
+
+    return await userAccessCache.get(uid);
+}
+
+export async function getAuthorData(authorName) {
+    if (!authorName) {
+        return null;
+    }
+
+    if (!authorDataCache.has(authorName)) {
+        authorDataCache.set(authorName, (async () => {
+            try {
+                const authorRef = doc(db, "authors", authorName);
+                const authorDoc = await getDoc(authorRef);
+
+                if (authorDoc.exists()) {
+                    return {
+                        authorName,
+                        ...authorDoc.data()
+                    };
+                }
+
+                return null;
+            } catch (error) {
+                console.error("Error fetching author data:", error);
+                authorDataCache.delete(authorName);
+                return null;
+            }
+        })());
+    }
+
+    return await authorDataCache.get(authorName);
+}
 
 // Store all recipes globally for filtering
 let allRecipes = [];
@@ -338,3 +398,4 @@ window.addEventListener("DOMContentLoaded", async () => {
         });
     }
 });
+

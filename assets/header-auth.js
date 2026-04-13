@@ -1,6 +1,5 @@
-import { checkAuthState, signOutUser, getUserAccess } from "./auth.js";
-import { db } from "./firebase.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+import { checkAuthState, signOutUser } from "./auth.js";
+import { getUserAccess, getAuthorData } from "./firebase.js";
 
 console.log("\n╔═══════════════════════════════════════════════════╗");
 console.log("║   📍 header-auth.js MODULE LOADING STARTED     ║");
@@ -15,38 +14,74 @@ console.log("📍 Set window.__headerAuthLoading = true - beginning initializati
 let userDataCache = null;
 let authorDataCache = null;
 let headerAuthInitialized = false;
+let headerElementsCache = null;
+
+function getHeaderElements() {
+    if (headerElementsCache) {
+        return headerElementsCache;
+    }
+
+    headerElementsCache = {
+        loginButton: document.getElementById("login-button"),
+        profileMenuContainer: document.getElementById("profile-menu-container"),
+        profileMenuButton: document.getElementById("profile-menu-button"),
+        profileMenuImage: document.getElementById("profile-menu-image"),
+        profileMenuInitials: document.getElementById("profile-menu-initials"),
+        profileDropdown: document.getElementById("profile-dropdown"),
+        menuNewRecipe: document.getElementById("menu-new-recipe"),
+        menuEditRecipes: document.getElementById("menu-edit-recipes"),
+        menuMyAccount: document.getElementById("menu-my-account"),
+        menuLogout: document.getElementById("menu-logout"),
+        bannerNewRecipeButton: document.getElementById("banner-new-recipe-button"),
+        searchButton: document.getElementById("searchButton"),
+        mobileLoginButton: document.getElementById("mobile-login-button"),
+        mobileProfileSection: document.getElementById("mobile-profile-section"),
+        mobileProfileToggle: document.getElementById("mobile-profile-toggle"),
+        mobileProfileSubmenu: document.getElementById("mobile-profile-submenu"),
+        mobileProfileImage: document.getElementById("mobile-profile-image"),
+        mobileProfileInitials: document.getElementById("mobile-profile-initials"),
+        mobileProfileName: document.getElementById("mobile-profile-name"),
+        mobileProfileChevron: document.getElementById("mobile-profile-chevron"),
+        mobileMenuNewRecipe: document.getElementById("mobile-menu-new-recipe"),
+        mobileMenuEditRecipes: document.getElementById("mobile-menu-edit-recipes"),
+        mobileMenuMyAccount: document.getElementById("mobile-menu-my-account"),
+        mobileMenuLogout: document.getElementById("mobile-menu-logout")
+    };
+
+    return headerElementsCache;
+}
 
 // Update header based on authentication state
 async function updateHeaderAuthState(user) {
     console.log("\n========== START updateHeaderAuthState ==========");
     console.log("AUTH STATE:", user ? "LOGGED IN (" + user.email + ")" : "LOGGED OUT");
     
-    // Declare all elements at the top
-    const loginButton = document.getElementById("login-button");
-    const profileMenuContainer = document.getElementById("profile-menu-container");
-    const profileMenuButton = document.getElementById("profile-menu-button");
-    const profileMenuImage = document.getElementById("profile-menu-image");
-    const profileMenuInitials = document.getElementById("profile-menu-initials");
-    const profileDropdown = document.getElementById("profile-dropdown");
-    const menuNewRecipe = document.getElementById("menu-new-recipe");
-    const menuEditRecipes = document.getElementById("menu-edit-recipes");
-    const menuMyAccount = document.getElementById("menu-my-account");
-    const menuLogout = document.getElementById("menu-logout");
-    const bannerNewRecipeButton = document.getElementById("banner-new-recipe-button");
-    const searchButton = document.getElementById("searchButton");
-    
-    const mobileLoginButton = document.getElementById("mobile-login-button");
-    const mobileProfileSection = document.getElementById("mobile-profile-section");
-    const mobileProfileToggle = document.getElementById("mobile-profile-toggle");
-    const mobileProfileSubmenu = document.getElementById("mobile-profile-submenu");
-    const mobileProfileImage = document.getElementById("mobile-profile-image");
-    const mobileProfileInitials = document.getElementById("mobile-profile-initials");
-    const mobileProfileName = document.getElementById("mobile-profile-name");
-    const mobileProfileChevron = document.getElementById("mobile-profile-chevron");
-    const mobileMenuNewRecipe = document.getElementById("mobile-menu-new-recipe");
-    const mobileMenuEditRecipes = document.getElementById("mobile-menu-edit-recipes");
-    const mobileMenuMyAccount = document.getElementById("mobile-menu-my-account");
-    const mobileMenuLogout = document.getElementById("mobile-menu-logout");
+    const {
+        loginButton,
+        profileMenuContainer,
+        profileMenuButton,
+        profileMenuImage,
+        profileMenuInitials,
+        profileDropdown,
+        menuNewRecipe,
+        menuEditRecipes,
+        menuMyAccount,
+        menuLogout,
+        bannerNewRecipeButton,
+        searchButton,
+        mobileLoginButton,
+        mobileProfileSection,
+        mobileProfileToggle,
+        mobileProfileSubmenu,
+        mobileProfileImage,
+        mobileProfileInitials,
+        mobileProfileName,
+        mobileProfileChevron,
+        mobileMenuNewRecipe,
+        mobileMenuEditRecipes,
+        mobileMenuMyAccount,
+        mobileMenuLogout
+    } = getHeaderElements();
     
     console.log("\n🔍 ELEMENT STATUS REPORT:");
     console.log("  loginButton:", { exists: !!loginButton });
@@ -97,74 +132,56 @@ async function updateHeaderAuthState(user) {
         
         // Load profile picture and set up menu
         try {
-            // Fetch user access data once and cache it
-            if (!userDataCache || userDataCache.uid !== user.uid) {
-                userDataCache = await getUserAccess(user.uid);
-                userDataCache.uid = user.uid;
-            }
-            const userAccess = userDataCache;
+            const userAccess = userDataCache && userDataCache.uid === user.uid
+                ? userDataCache
+                : await getUserAccess(user.uid);
+
+            userDataCache = userAccess ? { ...userAccess, uid: user.uid } : null;
             
             const hasPublishAccess = userAccess && (userAccess.publish_recipes === true || userAccess.admin === true);
             const hasEditorAccess = userAccess && (userAccess.redaktør === true || userAccess.redaktoer === true);
             const hasSpecialAccess = hasPublishAccess || hasEditorAccess;
-            
-            console.log("Access levels - publish:", hasPublishAccess, "editor:", hasEditorAccess);
 
             // Load author data if available
+            let publicName = null;
             if (userAccess && userAccess["author-name"]) {
-                // Check cache for author data
-                if (!authorDataCache || authorDataCache.authorName !== userAccess["author-name"]) {
-                    const authorRef = doc(db, "authors", userAccess["author-name"]);
-                    const authorDoc = await getDoc(authorRef);
-                    
-                    if (authorDoc.exists()) {
-                        authorDataCache = {
-                            authorName: userAccess["author-name"],
-                            ...authorDoc.data()
-                        };
-                    } else {
-                        authorDataCache = null;
+                const authorData = authorDataCache && authorDataCache.authorName === userAccess["author-name"]
+                    ? authorDataCache
+                    : await getAuthorData(userAccess["author-name"]);
+
+                authorDataCache = authorData;
+                publicName = authorData?.public_name || authorData?.["public-name"] || userAccess["author-name"];
+
+                if (authorData?.img && profileMenuImage) {
+                    profileMenuImage.src = authorData.img;
+                    profileMenuImage.style.display = "block";
+                    if (profileMenuInitials) profileMenuInitials.style.display = "none";
+                } else {
+                    const name = publicName || "U";
+                    const initials = name.split(" ").map(n => n[0]).join("").toUpperCase();
+                    if (profileMenuInitials) {
+                        profileMenuInitials.textContent = initials;
+                        profileMenuInitials.style.display = "block";
                     }
+                    if (profileMenuImage) profileMenuImage.style.display = "none";
                 }
-                
-                const authorData = authorDataCache;
-                    const publicName = authorData.public_name || authorData["public-name"] || userAccess["author-name"];
-                    
-                    console.log("Author data loaded:", publicName);
-                    
-                    // Set desktop profile picture
-                    if (authorData.img && profileMenuImage) {
-                        profileMenuImage.src = authorData.img;
-                        profileMenuImage.style.display = "block";
-                        if (profileMenuInitials) profileMenuInitials.style.display = "none";
-                    } else {
-                        // Show initials
-                        const name = publicName || "U";
-                        const initials = name.split(" ").map(n => n[0]).join("").toUpperCase();
-                        if (profileMenuInitials) {
-                            profileMenuInitials.textContent = initials;
-                            profileMenuInitials.style.display = "block";
-                        }
-                        if (profileMenuImage) profileMenuImage.style.display = "none";
-                    }
-                    
-                    // Set mobile profile picture and name
-                    if (mobileProfileName) {
-                        mobileProfileName.textContent = publicName;
-                    }
-                    if (authorData.img && mobileProfileImage) {
-                        mobileProfileImage.src = authorData.img;
-                        mobileProfileImage.classList.remove("hidden");
-                        if (mobileProfileInitials) mobileProfileInitials.style.display = "none";
-                    } else if (mobileProfileInitials) {
-                        const name = publicName || "U";
-                        const initials = name.split(" ").map(n => n[0]).join("").toUpperCase();
-                        mobileProfileInitials.textContent = initials;
-                        if (mobileProfileImage) mobileProfileImage.classList.add("hidden");
-                        mobileProfileInitials.style.display = "block";
-                    }
+
+                if (mobileProfileName) {
+                    mobileProfileName.textContent = publicName;
+                }
+                if (authorData?.img && mobileProfileImage) {
+                    mobileProfileImage.src = authorData.img;
+                    mobileProfileImage.classList.remove("hidden");
+                    if (mobileProfileInitials) mobileProfileInitials.style.display = "none";
+                } else if (mobileProfileInitials) {
+                    const name = publicName || "U";
+                    const initials = name.split(" ").map(n => n[0]).join("").toUpperCase();
+                    mobileProfileInitials.textContent = initials;
+                    if (mobileProfileImage) mobileProfileImage.classList.add("hidden");
+                    mobileProfileInitials.style.display = "block";
                 }
             } else {
+                authorDataCache = null;
                 // No author name, show user initial
                 const email = user.email || "U";
                 const initial = email[0].toUpperCase();
@@ -241,35 +258,22 @@ async function updateHeaderAuthState(user) {
                     window.location.href = hasSpecialAccess ? "min-konto-adm.html" : "min-konto.html";
                 };
             }
-        } catch (error) {
-            console.error("Error loading user profile:", error);
-        }
-
-        // Show banner button if has publish or editor access (desktop only)
-        if (bannerNewRecipeButton) {
-            try {
-                // Use cached user access data
-                if (!userDataCache || userDataCache.uid !== user.uid) {
-                    userDataCache = await getUserAccess(user.uid);
-                    userDataCache.uid = user.uid;
-                }
-                const userAccess = userDataCache;
-                
-                const hasPublishAccess = userAccess && (userAccess.publish_recipes === true || userAccess.admin === true);
-                const hasEditorAccess = userAccess && (userAccess.redaktør === true || userAccess.redaktoer === true);
+            // Show banner button if has publish or editor access (desktop only)
+            if (bannerNewRecipeButton) {
                 if (hasPublishAccess || hasEditorAccess) {
-                    // Show button on desktop only
                     bannerNewRecipeButton.classList.remove("hidden");
                     bannerNewRecipeButton.classList.add("md:block");
                     bannerNewRecipeButton.onclick = () => {
                         window.location.href = "ny-oppskrift.html";
                     };
                 } else {
-                    // Ensure button is hidden if no access
                     bannerNewRecipeButton.classList.add("hidden");
                     bannerNewRecipeButton.classList.remove("md:block");
                 }
-            } catch (error) {
+            }
+        } catch (error) {
+            console.error("Error loading user profile:", error);
+            if (bannerNewRecipeButton) {
                 bannerNewRecipeButton.classList.add("hidden");
                 bannerNewRecipeButton.classList.remove("md:block");
             }
@@ -386,6 +390,10 @@ function initializeHeaderAuth() {
     console.log("✓ Header elements found, setting up event listeners");
     console.log("  - Desktop elements OK:", hasDesktopElements);
     console.log("  - Mobile elements OK:", hasMobileElements);
+
+    // Header is now in the DOM, safe to cache references used by auth updates.
+    headerElementsCache = null;
+    getHeaderElements();
 
     // ========== MOBILE MENU TOGGLE ==========
     if (mobileMenuButton && mobileMenu && mobileMenuOverlay) {

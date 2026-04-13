@@ -1,6 +1,5 @@
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
-import { auth, db } from "./firebase.js";
+import { auth } from "./firebase.js";
 
 // Initialize Google Auth Provider
 const googleProvider = new GoogleAuthProvider();
@@ -52,23 +51,7 @@ export function checkAuthState(callback) {
     });
 }
 
-// Get user access data from Firestore
-export async function getUserAccess(uid) {
-    try {
-        const userAccessRef = doc(db, "user_access", uid);
-        const userAccessDoc = await getDoc(userAccessRef);
-        
-        if (userAccessDoc.exists()) {
-            return userAccessDoc.data();
-        } else {
-            console.log("No user_access document found for UID:", uid);
-            return null;
-        }
-    } catch (error) {
-        console.error("Error fetching user access:", error);
-        return null;
-    }
-}
+export { getUserAccess } from "./firebase.js";
 
 // Display error message
 function showError(message) {
